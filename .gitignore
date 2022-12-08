@@ -1,129 +1,87 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+#!/usr/bin/env python
 
-# C extensions
-*.so
+import rospy
+import smach
+import smach_ros
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+from std_msgs.msg import Bool
+from sensor_msgs.msg import Joy
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+modeCounter = 1
+wasButtonPush = False
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+class JoyTwist(object):
+	def __init__(self):
+		self._joy_sub = rospy.Subscriber('joy', Joy, self.joy_callback, queue_size=1)
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
+	def joy_callback(self, joy_msg):
+		global modeCounter
+		global wasButtonPush
+		if joy_msg.buttons[16] == 1:
+			if wasButtonPush == 0:
+				modeCounter = modeCounter + 1
+				wasButtonPush = True
+		else:
+			wasButtonPush = False
 
-# Translations
-*.mo
-*.pot
+		if modeCounter == 5:
+			modeCounter = 1
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+class Stand_by_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
-# Flask stuff:
-instance/
-.webassets-cache
+    def execute(self, userdata):
+        if modeCounter == 2:
+            return 'done'
+        else:
+            return 'doing'
 
-# Scrapy stuff:
-.scrapy
+class Search_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
-# Sphinx documentation
-docs/_build/
+    def execute(self, userdata):
+        if modeCounter == 3:
+            return 'done'
+        else:
+            return 'doing'
 
-# PyBuilder
-target/
+class Harvest_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
-# Jupyter Notebook
-.ipynb_checkpoints
+    def execute(self, userdata):
+        if modeCounter == 4:
+            return 'done'
+        else:
+            return 'doing'
 
-# IPython
-profile_default/
-ipython_config.py
+class Transport_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
-# pyenv
-.python-version
+    def execute(self, userdata):
+        if modeCounter == 1:
+            return 'done'
+        else:
+            return 'doing'
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
+def main():
+    sm_top = smach.StateMachine(outcomes=[''])
+    with sm_top:
+        smach.StateMachine.add('Stand_by_mode', Stand_by_mode(), transitions={'done':'Search_mode' , 'doing':'Stand_by_mode'})
+        smach.StateMachine.add('Harvest_mode', Harvest_mode(), transitions={'done':'Transport_mode' , 'doing':'Harvest_mode'})
+        smach.StateMachine.add('Search_mode', Search_mode(), transitions={'done':'Harvest_mode' , 'doing':'Search_mode'})
+        smach.StateMachine.add('Transport_mode', Transport_mode(), transitions={'done':'Stand_by_mode' , 'doing':'Transport_mode'})
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
+    sis = smach_ros.IntrospectionServer('smach_server', sm_top, '/SM_ROOT')
+    sis.start()
+    outcome = sm_top.execute()
+    sis.stop()
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
+if __name__ == '__main__':
+    rospy.init_node('smach_somple2')
+    joy_twist = JoyTwist()
+    main()
+    rospy.spin()
