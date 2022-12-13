@@ -39,12 +39,14 @@ class Stand_by_mode(smach.State):
 
 class Search_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['done'])
+        smach.State.__init__(self, outcomes=['done','doing'])
 
     def execute(self, userdata):
         if modeCounter == 2:
             time.sleep(1)
             return 'done'
+	else:
+	    return 'doing'
 
 class Harvest_mode(smach.State):
     def __init__(self):
@@ -81,7 +83,7 @@ def main():
         search_sub = smach.StateMachine(outcomes=['mode_finish'])
 
         with search_sub:
-            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'TRANSPORT_MODE'})
+            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'TRANSPORT_MODE','doing':'Search'})
             transport_sub = smach.StateMachine(outcomes=['mode_finish'])
             with transport_sub:
                 smach.StateMachine.add('Transport',Transport_mode(), transitions={'done':'mode_finish', 'doing':'Transport'})
