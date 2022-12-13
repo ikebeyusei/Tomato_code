@@ -3,7 +3,7 @@
 import rospy
 import smach
 import smach_ros
-
+import time
 from sensor_msgs.msg import Joy
 
 modeCounter = 1
@@ -23,35 +23,36 @@ class JoyTwist(object):
 		else:
 			wasButtonPush = False
 
-		if modeCounter == 5:
+		if modeCounter == 3:
 			modeCounter = 1
 
 class Stand_by_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['first_ps_push', 'doing'])
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
     def execute(self, userdata):
         if modeCounter == 2:
+            time.sleep(1)
             return 'done'
         else:
             return 'doing'
 
 class Search_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['done', 'doing', 'secomd_ps_push'])
+        smach.State.__init__(self, outcomes=['done'])
 
     def execute(self, userdata):
-        if modeCounter == 3:
+        if modeCounter == 2:
+            time.sleep(1)
             return 'done'
-        else:
-            return 'doing'
 
 class Harvest_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['done', 'doing', 'secomd_ps_push'])
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
     def execute(self, userdata):
-        if modeCounter == 4:
+        if modeCounter == 2:
+            time.sleep(1)
             return 'done'
         else:
             return 'doing'
@@ -61,7 +62,8 @@ class Transport_mode(smach.State):
         smach.State.__init__(self, outcomes=['done', 'doing'])
 
     def execute(self, userdata):
-        if modeCounter == 1:
+        if modeCounter == 2:
+            time.sleep(1)
             return 'done'
         else:
             return 'doing'
@@ -72,31 +74,26 @@ def main():
     with sm:
         init_sub = smach.StateMachine(outcomes=['mode_finish'])
         with init_sub:
-            smach.StateMachine.add('Stand_By',Stand_by_mode(), transitions={'first_ps_push':'mode_finish' , 'doing':'Stand_By'})
+            smach.StateMachine.add('Stand_By',Stand_by_mode(), transitions={'done':'mode_finish' , 'doing':'Stand_By'})
 
         smach.StateMachine.add('STAND_BY_MODE',init_sub, transitions={'mode_finish':'SEARCH_MODE'})
 
-        search_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
+        search_sub = smach.StateMachine(outcomes=['mode_finish'])
 
         with search_sub:
-            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'mode_finish' , 'doing':'TRANSPORT_MODE', 'secomd_ps_push':'exit'})
-
+            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'TRANSPORT_MODE'})
             transport_sub = smach.StateMachine(outcomes=['mode_finish'])
-
             with transport_sub:
-                smach.StateMachine.add('Transport',Transport_mode(),transitions={'done':'mode_finish' , 'doing':'Transport'})
-
+                smach.StateMachine.add('Transport',Transport_mode(), transitions={'done':'mode_finish', 'doing':'Transport'})
             smach.StateMachine.add('TRANSPORT_MODE',transport_sub, transitions={'mode_finish':'mode_finish'})
+        smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'HARVEST_MODE'})
 
-        smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'HARVEST_MODE', 'secomd_ps_push':'exit'})
-
-        harvest_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
-
+        harvest_sub = smach.StateMachine(outcomes=['mode_finish'])
         with harvest_sub:
             smach.StateMachine.add('Harvest',Harvest_mode(),transitions={'done':'mode_finish' , 'doing':'Harvest'})
 
         smach.StateMachine.add('HARVEST_MODE',harvest_sub, transitions={'mode_finish':'SEARCH_MODE'})
-	
+
     sis = smach_ros.IntrospectionServer('smach_server', sm, '/ROOT')
     sis.start()
     outcome = sm.execute()
@@ -107,5 +104,3 @@ if __name__ == '__main__':
     joy_twist = JoyTwist()
     main()
     rospy.spin()
-
-
