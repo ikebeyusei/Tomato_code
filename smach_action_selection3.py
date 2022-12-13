@@ -88,8 +88,6 @@ def main():
 
             smach.StateMachine.add('TRANSPORT_MODE',transport_sub, transitions={'mode_finish':'mode_finish'})
 
-        '''もしかしたら上の文のtransitionsに「exit」を書かないといけないかも'''
-
         smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'HARVEST_MODE', 'secomd_ps_push':'exit'})
 
         harvest_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
@@ -98,7 +96,7 @@ def main():
             smach.StateMachine.add('Harvest',Harvest_mode(),transitions={'done':'mode_finish' , 'doing':'Harvest'})
 
         smach.StateMachine.add('HARVEST_MODE',harvest_sub, transitions={'mode_finish':'SEARCH_MODE'})
-
+	
     sis = smach_ros.IntrospectionServer('smach_server', sm, '/ROOT')
     sis.start()
     outcome = sm.execute()
