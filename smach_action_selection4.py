@@ -9,6 +9,8 @@ from sensor_msgs.msg import Joy
 modeCounter = 1
 wasButtonPush = False
 detection_flag = False
+target_pos_flag = False
+vehicle_distance = 0
 
 class JoyTwist(object):
 	def __init__(self):
@@ -40,48 +42,73 @@ class Stand_by_mode(smach.State):
 
 class Search_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['done'])
-
-    def execute(self, userdata):
-        detection_flag = False # Tomato_is_unknown
-        return 'done'
-
-class Harvest_mode(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['done', 'doing'])
-
-    def execute(self, userdata):
-        if modeCounter == 2:
-            time.sleep(1)
-            return 'done'
-        else:
-            return 'doing'
-
-class Transport_mode(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['done', 'doing'])
+        smach.State.__init__(self, outcomes=['done','exit'])
 
     def execute(self, userdata):
         if modeCounter == 2:
             time.sleep(2)
             return 'done'
         else:
-            return 'doing'
+            return 'exit' 
+
+class Harvest_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done' , 'exit'])
+
+    def execute(self, userdata):
+        if modeCounter == 2:
+            time.sleep(2)
+            return 'done'
+        else:
+            return 'exit' 
+
+class Transport_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done', 'exit'])
+
+    def execute(self, userdata):
+        if modeCounter == 2:
+            time.sleep(2)
+            return 'done'
+        else:
+            return 'exit' 
 
 class Detection_tomato(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['true','false'])
+        smach.State.__init__(self,outcomes=['true', 'false', 'exit'])
 
     def execute(self,userdata):
-        time.sleep(2)
-        detection_flag = True  # tomato_is_found
-        if detection_flag == True:
-            return 'true'
+        if modeCounter == 1:
+            return 'exit'
         else:
-            return 'false'
+            global detection_flag
+            detection_flag = False
+            time.sleep(2)
+            detection_flag = True  # tomato_is_found
+            if detection_flag == True:
+                return 'true'
+            else:
+                return 'false'
+
+class Target_pos_tomato(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,outcomes=['true','false', 'exit'])
+
+    def execute(self,userdata):
+        if modeCounter == 1:
+            return 'exit'
+        else:
+            global target_pos_flag
+            target_pos_flag = False
+            time.sleep(2)
+            target_pos_flag = True
+            if target_pos_flag == True:
+                return 'true'
+            else:
+                return 'false'
 
 def main():
-    sm = smach.StateMachine(outcomes=['exit'])
+    sm = smach.StateMachine(outcomes=[''])
 
     with sm:
         init_sub = smach.StateMachine(outcomes=['mode_finish'])
@@ -90,22 +117,23 @@ def main():
 
         smach.StateMachine.add('STAND_BY_MODE',init_sub, transitions={'mode_finish':'SEARCH_MODE'})
 
-        search_sub = smach.StateMachine(outcomes=['mode_finish'])
+        search_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
         with search_sub:
-            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'detection_flag'})
-            smach.StateMachine.add('detection_flag', Detection_tomato(),transitions={'true':'mode_finish','false':'detection_flag'})
-        smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'TRANSPORT_MODE'})
+            smach.StateMachine.add('Search',Search_mode(),transitions={'done':'detection_flag','exit':'exit'})
+            smach.StateMachine.add('detection_flag', Detection_tomato(),transitions={'true':'target_pos_flag','false':'detection_flag','exit':'exit'})
+            smach.StateMachine.add('target_pos_flag', Target_pos_tomato(),transitions={'true':'mode_finish','false':'target_pos_flag','exit':'exit'})
+        smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'TRANSPORT_MODE','exit':'STAND_BY_MODE'})
 
-        transport_sub = smach.StateMachine(outcomes=['mode_finish'])
+        transport_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
         with transport_sub:
-                smach.StateMachine.add('Transport',Transport_mode(), transitions={'done':'mode_finish', 'doing':'Transport'})
-        smach.StateMachine.add('TRANSPORT_MODE',transport_sub, transitions={'mode_finish':'HARVEST_MODE'})
+                smach.StateMachine.add('Transport',Transport_mode(), transitions={'done':'mode_finish','exit':'exit'})
+        smach.StateMachine.add('TRANSPORT_MODE',transport_sub, transitions={'mode_finish':'HARVEST_MODE','exit':'STAND_BY_MODE'})
 
-        harvest_sub = smach.StateMachine(outcomes=['mode_finish'])
+        harvest_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
         with harvest_sub:
-            smach.StateMachine.add('Harvest',Harvest_mode(),transitions={'done':'mode_finish' , 'doing':'Harvest'})
+            smach.StateMachine.add('Harvest',Harvest_mode(),transitions={'done':'mode_finish' ,'exit':'exit'})
 
-        smach.StateMachine.add('HARVEST_MODE',harvest_sub, transitions={'mode_finish':'SEARCH_MODE'})
+        smach.StateMachine.add('HARVEST_MODE',harvest_sub, transitions={'mode_finish':'SEARCH_MODE','exit':'STAND_BY_MODE'})
 
     sis = smach_ros.IntrospectionServer('smach_server', sm, '/ROOT')
     sis.start()
