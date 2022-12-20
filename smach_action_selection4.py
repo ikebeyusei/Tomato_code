@@ -14,7 +14,7 @@ target_pos_flag = False
 axis_mode = 0
 arm_mode = 0
 gripper_mode = 0
-vehicle_mode = 0
+vehicle_mode = 1
 
 class JoyTwist(object):
 	def __init__(self):
@@ -76,7 +76,7 @@ class Transport_mode(smach.State):
 
 class Detection_tomato(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['true', 'false', 'exit'])
+        smach.State.__init__(self,outcomes=['done', 'exit'])
 
     def execute(self,userdata):
         if modeCounter == 1:
@@ -84,13 +84,9 @@ class Detection_tomato(smach.State):
         else:
             global detection_flag
             detection_flag = False
-            vehicle_mode = 0
             time.sleep(1)
             detection_flag = True  # tomato_is_found
-            if detection_flag == True:
-                return 'true'
-            else:
-                return 'false'
+            return 'done'
 
 class Target_pos_tomato(smach.State):
     def __init__(self):
@@ -156,17 +152,15 @@ class Arm_mode(smach.State):
 class Vehicle_mode(smach.State):
     def __init__(self):
         global vehicle_mode
-        vehicle_mode = 0
         smach.State.__init__(self,outcomes=['0','1','2','exit'])
 
     def execute(self,userdata):
         if modeCounter == 1:
             return 'exit'
         else:
-            time.sleep(1)
             if detection_flag == True:
+                time.sleep(1)
                 vehicle_mode = 0
-                detection_flag = True
                 return '0'
             else:
                 vehicle_mode = 1
@@ -185,7 +179,7 @@ def main():
         search_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
         with search_sub:
             smach.StateMachine.add('Search_Start',Search_mode(),transitions={'done':'detection_flag','exit':'exit'})
-            smach.StateMachine.add('detection_flag', Detection_tomato(),transitions={'true':'target_pos_flag','false':'vehicle_mode','exit':'exit'})
+            smach.StateMachine.add('detection_flag', Detection_tomato(),transitions={'done':'vehicle_mode','exit':'exit'})
             smach.StateMachine.add('vehicle_mode',Vehicle_mode(),transitions={'0':'target_pos_flag','1':'detection_flag','2':'detection_flag','exit':'exit'})
             smach.StateMachine.add('target_pos_flag', Target_pos_tomato(),transitions={'true':'mode_finish','false':'target_pos_flag','exit':'exit'})
         smach.StateMachine.add('SEARCH_MODE',search_sub, transitions={'mode_finish':'HARVEST_MODE','exit':'STAND_BY_MODE'})
