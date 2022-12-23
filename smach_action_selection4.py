@@ -8,13 +8,25 @@ from sensor_msgs.msg import Joy
 
 modeCounter = 1
 wasButtonPush = False
-detection_flag = False
-target_pos_flag = False
 
+#publish
 axis_mode = 0
 arm_mode = 0
 gripper_mode = 0
 vehicle_mode = 1
+robot_mode = 10
+
+#subscribe
+vehicle_distance = 0
+detection_flag = False
+target_pos_flag = False
+
+axis_state_srv = False
+axis_state_org = False
+axis_state_move = False
+
+arm_state = 0
+gripper_state = 0
 
 class JoyTwist(object):
 	def __init__(self):
@@ -38,6 +50,8 @@ class Stand_by_mode(smach.State):
         smach.State.__init__(self, outcomes=['done', 'doing'])
 
     def execute(self, userdata):
+        global robot_mode
+        robot_mode = 10
         if modeCounter == 2:
             return 'done'
         else:
@@ -48,6 +62,7 @@ class Search_mode(smach.State):
         smach.State.__init__(self, outcomes=['done','exit'])
 
     def execute(self, userdata):
+        robot_mode = 20
         if modeCounter == 2:
             return 'done'
         else:
@@ -58,6 +73,7 @@ class Harvest_mode(smach.State):
         smach.State.__init__(self, outcomes=['done' , 'exit'])
 
     def execute(self, userdata):
+        robot_mode = 30
         if modeCounter == 2:
             return 'done'
         else:
@@ -68,6 +84,7 @@ class Transport_mode(smach.State):
         smach.State.__init__(self, outcomes=['done', 'exit'])
 
     def execute(self, userdata):
+        robot_mode = 40
         if modeCounter == 2:
             time.sleep(1)
             return 'done'
@@ -120,6 +137,23 @@ class Axis_mode(smach.State):
             time.sleep(1)
             axis_mode = 2
             return 'done'
+
+def Axis_state(self):
+    # subsctibe
+    global axis_state_srv
+    global axis_state_org
+    global axis_state_move
+
+    if axis_state_org == True:
+        axis_mode = 1
+        time.sleep(0.5)
+        axis_mode = 2
+        time.sleep(0.5)
+    elif axis_state_move == True:
+        axis_mode = 3
+
+    else:
+        axis_mode = 0
 
 class Gripper_mode(smach.State):
     def __init__(self):
