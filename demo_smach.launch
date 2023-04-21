@@ -1,0 +1,11 @@
+<launch>
+    	<node pkg="turtlesim" name="sim1" type="turtlesim_node"/>
+   	<node pkg="joy" name="joy_node" type="joy_node"/>
+    	<node pkg="ros_start" name="joy_twist_node" type="joy_twist_3rd.py" output="screen"/>
+ 	<node name="serial_sub_node"        pkg="rosserial_python"      type="serial_node.py">
+   	 	<param name="port"              type="string"               value="/dev/ttyACM0"/>
+   	 	<param name="baud"              type="int"                  value="57600"/>
+   	</node>
+	<node pkg="rostopic" type="rostopic" name="rosserial_pub_node" args="pub /led std_msgs/Bool False" output="screen"/>
+	<node pkg="ros_start" name="demo_node1" type="demo_smach.py" output="screen"/>
+</launch>
