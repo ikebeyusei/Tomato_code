@@ -11,7 +11,7 @@ wasButtonPush = False
 
 class JoyTwist(object):
     def __init__(self):
-        self._joy_sub = rospy.Subscriber('joy',Joy,self.joy_call_back,queue_seize=1)
+        self._joy_sub = rospy.Subscriber('joy',Joy,self.joy_callback,queue_size=1)
 
     def joy_callback(self,joy_msgs):
         global modeCounter
@@ -29,7 +29,7 @@ class JoyTwist(object):
             modeCounter = 1
 
 #move_mode
-class Stop(smach.state):
+class Stop(smach.State):
     #process everything through "Stop"
     def __init__(self):
         smach.State.__init__(self,outcomes=['move_forward','step_back','turn_left','turn_right','move_to_the_right','move_to_the_left','doing'])
@@ -53,7 +53,7 @@ class Stop(smach.state):
         elif modeCounter == 8:
             return 'move_to_the_left'
         
-class Move_forward(smach.state):
+class Move_forward(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -61,7 +61,7 @@ class Move_forward(smach.state):
         time.sleep(1.0)#I'm going to change this
         return 'stop'#after 1 second, put it into Stop_mode
 
-class Step_back(smach.state):
+class Step_back(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -69,7 +69,7 @@ class Step_back(smach.state):
         time.sleep(1.0)#I'm going to change this
         return 'stop'#after 1 second, put it into Stop_mode
 
-class Turn_left(smach.state):
+class Turn_left(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -77,7 +77,7 @@ class Turn_left(smach.state):
         time.sleep(1.0)#I'm going to change this
         return 'stop'#after 1 second, put it into Stop_mode
         
-class Turn_right(smach.state):
+class Turn_right(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -85,7 +85,7 @@ class Turn_right(smach.state):
         time.sleep(1.0)#I'm going to change this
         return 'stop'#after 1 second, put it into Stop_mode
     
-class Move_to_the_right(smach.state):
+class Move_to_the_right(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -93,7 +93,7 @@ class Move_to_the_right(smach.state):
         time.sleep(1.0)#I'm going to change this
         return 'stop'#after 1 second, put it into Stop_mode
     
-class Move_to_the_left(smach.state):
+class Move_to_the_left(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['stop'])
 
@@ -102,7 +102,7 @@ class Move_to_the_left(smach.state):
         return 'stop'#after 1 second, put it into Stop_mode
     
 #camera!!!!!
-class Image_recognition(smach.state):
+class Image_recognition(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['done','doing'])
 
@@ -116,7 +116,7 @@ class Image_recognition(smach.state):
         else:
             return 'doing'
 
-class Distance_calculation(smach.state):
+class Distance_calculation(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['doing','done'])
 
@@ -131,7 +131,7 @@ class Distance_calculation(smach.state):
             return 'doing'
         
 #arm!!!!
-class Arm_init(smach.state):
+class Arm_init(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['done'])
     
@@ -139,7 +139,7 @@ class Arm_init(smach.state):
         #write the process to set the arm to the initial position
         return 'done'
 
-class Arm_open(smach.state):
+class Arm_open(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['done'])
 
@@ -147,7 +147,7 @@ class Arm_open(smach.state):
         time.sleep(1.0)
         return 'done'
 
-class Arm_close(smach.state):
+class Arm_close(smach.State):
     def __init__(self):
             smach.State.__init__(self,outcomes=['done'])
 
@@ -155,7 +155,7 @@ class Arm_close(smach.state):
         time.sleep(1.0)
         return 'done'
 
-class Line_tracing(smach.state):
+class Line_tracing(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['detection','not_detected'])
 
@@ -176,7 +176,7 @@ def main():
     with sm:
         init_sub = smach.StateMachine(outcomes=['Not','doing'])
         with init_sub:
-            smach.StateMachine.add('Line_Tracing',Line_tracing(),transitions={'detection':'Line_Tracing','not_detected':'mode_finish'})
+            smach.StateMachine.add('Line_Tracing',Line_tracing(),transitions={'detection':'Line_Tracing','not_detected':'doing'})
         smach.StateMachine.add('LINE_TRACING',init_sub,transitions={'Not':'MOVE_MODE','doing':'LINE_TRACING'})
 
         move_sub = smach.StateMachine(outcomes = ['mode_finish'])
@@ -206,7 +206,3 @@ if __name__ == '__main__':
     joy_twist = JoyTwist()
     main()
     rospy.spin()
-
-
-
-
