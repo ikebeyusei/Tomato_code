@@ -1,4 +1,4 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 
 import rospy
 import smach
@@ -6,200 +6,291 @@ import smach_ros
 import time
 from sensor_msgs.msg import Joy
 
-global madeCounter
-modeCounter = 1
+modeCounter = 0
 wasButtonPush = False
+controlCounter = 0
+wasButtonPush2 = False
+global str_moveMode
+str_moveMode = 'stop'
+
 
 class JoyTwist(object):
-    def __init__(self):
-        self._joy_sub = rospy.Subscriber('joy',Joy,self.joy_callback,queue_size=1)
+	def __init__(self):
+		self._joy_sub = rospy.Subscriber('joy', Joy, self.joy_callback, queue_size=1)
 
-    def joy_callback(self,joy_msgs):
-        global modeCounter
-        global wasButtonPush
-        #avoiding Duplicate Reads
-        #joy_msgs[16] ==> PS_button
-        if joy_msgs[16] == 1:
+	def joy_callback(self, joy_msg):
+         global modeCounter
+         global wasButtonPush
+         global controlCounter
+         global wasButtonPush2
+         if joy_msg.buttons[16] == 1:
             if wasButtonPush == 0:
                 modeCounter = modeCounter + 1
                 wasButtonPush = True
-        else:
-            wasButtonPush = False
+            else:
+                wasButtonPush = False
 
-        if modeCounter == 9:
+         if joy_msg.buttons[3] == 1:
+            if controlCounter == 0:
+                controlCounter = controlCounter + 1
+                wasButtonPush2 = True
+            else:
+                wasButtonPush2 = False
+
+        if modeCounter == 8:
             modeCounter = 1
 
-#move_mode
-class Stop(smach.State):
-    #process everything through "Stop"
+class Stand_by_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['move_forward','step_back','turn_left','turn_right','move_to_the_right','move_to_the_left','doing','done'])
+        smach.State.__init__(self, outcomes=['done', 'doing'])
 
-    def execute(self,userdata):
-        global robot_mode
-        robot_mode = 0
-        #when modeCounter is 2, R2 tries to keep stopping
+    def execute(self, userdata):
         if modeCounter == 1:
-            return 'doing'
-        elif modeCounter == 2:
-            return 'move_forward'
-        elif modeCounter == 3:
-            return 'step_back'
-        elif modeCounter == 4:
-            return 'turn_left'
-        elif modeCounter == 5:
-            return 'turn_right'
-        elif modeCounter == 6:
-            return 'move_to_the_right'
-        elif modeCounter == 7:
-            return 'move_to_the_left'
-        else:
             return 'done'
-        
+        else:
+            return 'doing'
+
+class Stand_by_finish(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['select_push_1','select_push_2'])
+
+    def execute(self, userdata):
+        global controlCounter
+        if controlCounter == 1:
+            time.sleep(1)
+            return 'select_push_1'
+        else:
+            return 'select_push_2' 
+
+class Stop_mode(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=[
+            'done' ,
+            'doing',
+            'right',
+            'front',
+            'behind',
+            'left',
+            'exit'
+        ])
+
+    def execute(self, userdata):
+        if str_moveMode == 'stop':
+            return 'doing'
+        elif str_moveMode == 'front':
+            return 'front'
+        elif str_moveMode == 'back':
+            return 'behind'
+        elif str_moveMode == 'right':
+            return 'right'
+        elif str_moveMode == 'left':
+            return 'left'
+        elif str_moveMode == 'arm_init':
+            return 'done'
+        elif controlCounter == 2:
+            return 'exit'
+
 class Move_forward(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
 
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-
-class Step_back(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
-
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-
-class Turn_left(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
-
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-        
-class Turn_right(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
-
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-    
-class Move_to_the_right(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
-
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-    
-class Move_to_the_left(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['stop'])
-
-    def execute(self,userdata):
-        time.sleep(1.0)#I'm going to change this
-        return 'stop'#after 1 second, put it into Stop_mode
-    
-#camera!!!!!
-class Image_recognition(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['done','doing'])
-
-    def execute(self,userdata):
-        global detection_flag
-        detection_flag = False
-        time.sleep(2.0)
-        detection_flag = True #true if R2 find the ball
-        if detection_flag == True:
-            return 'done'
-        else:
+    def execute(self, userdata):
+        if str_moveMode == 'front':
             return 'doing'
-
-class Distance_calculation(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['doing','done'])
-
-    def execute(self,userdata):
-        global enough_near
-        enough_near = False #true when close enough to the ball
-        time.sleep(2.0)
-        enough_near = True
-        if enough_near == True:
+        elif str_moveMode == 'stop':
             return 'done'
-        else:
+        elif controlCounter == 2:
+            return 'exit' 
+
+class Right_move(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'right':
             return 'doing'
-        
-#arm!!!!
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 2:
+            return 'exit' 
+
+class Back(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'back':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 2:
+            return 'exit' 
+
+class Left_move(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'left':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 2:
+            return 'exit' 
+
 class Arm_init(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['done'])
-    
+        smach.State.__init__(self,outcomes=['arm_open','arm_close','doing','exit'])
+
     def execute(self,userdata):
-        #write the process to set the arm to the initial position
-        return 'done'
+        if str_moveMode == 'arm_init':
+            return 'doing'
+        elif str_moveMode == 'arm_open':
+            return 'arm_open'
+        elif str_moveMode == 'arm_close':
+            return 'arm_close'
+        elif controlCounter == 2:
+            return 'exit'
 
 class Arm_open(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['done'])
+        smach.State.__init__(self,outcomes=['done','doing','exit','arm_init'])
 
     def execute(self,userdata):
-        time.sleep(1.0)
-        return 'done'
+        if str_moveMode == 'arm_init':
+            return 'arm_init'
+        elif str_moveMode == 'arm_open':
+            return 'doing'
+        elif str_moveMode == 'arm_close':
+            return 'done'
+        elif controlCounter == 2:
+            return 'exit'
 
 class Arm_close(smach.State):
     def __init__(self):
-            smach.State.__init__(self,outcomes=['done'])
+        smach.State.__init__(self,outcomes=['done','doing','exit','arm_init'])
 
     def execute(self,userdata):
-        time.sleep(1.0)
-        return 'done'
+        if str_moveMode == 'arm_init':
+            return 'arm_init'
+        elif str_moveMode == 'arm_open':
+            return 'done'
+        elif str_moveMode == 'arm_close':
+            return 'doing'
+        elif controlCounter == 2:
+            return 'exit'
 
-class Line_tracing(smach.State):
+class Manual_stop_mode(smach.State):
     def __init__(self):
-        smach.State.__init__(self,outcomes=['detection','not_detected'])
+        smach.State.__init__(self, outcomes=[
+            'done' ,
+            'doing',
+            'right',
+            'front',
+            'behind',
+            'left',
+            'exit'
+        ])
 
-    def execute(self,userdata):
-        global detection_line
-        detection_line = True
-        time.sleep(1.0)
-        detection_line = False
-        if detection_line == True:
-            return 'detection'
-        else:
-            return 'not_detected'
+    def execute(self, userdata):
+        if str_moveMode == 'stop':
+            return 'doing'
+        elif str_moveMode == 'front':
+            return 'front'
+        elif str_moveMode == 'back':
+            return 'behind'
+        elif str_moveMode == 'right':
+            return 'right'
+        elif str_moveMode == 'left':
+            return 'left'
+        elif str_moveMode == 'arm_init':
+            return 'done'
+        elif controlCounter == 1:
+            return 'exit'
 
-    
+class Manual_move_forward(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'front':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 1:
+            return 'exit' 
+
+class Manual_right_move(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'right':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 1:
+            return 'exit' 
+
+class Manual_back(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'back':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 1:
+            return 'exit' 
+
+class Manual_left_move(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['done','doing','exit'])
+
+    def execute(self, userdata):
+        if str_moveMode == 'left':
+            return 'doing'
+        elif str_moveMode == 'stop':
+            return 'done'
+        elif controlCounter == 1:
+            return 'exit' 
+
 def main():
     sm = smach.StateMachine(outcomes=[''])
 
     with sm:
-        init_sub = smach.StateMachine(outcomes=['Not','doing'])
+        init_sub = smach.StateMachine(outcomes=['1','2'])
         with init_sub:
-            smach.StateMachine.add('Line_Tracing',Line_tracing(),transitions={'detection':'Line_Tracing','not_detected':'Not'})
-        smach.StateMachine.add('LINE_TRACING',init_sub,transitions={'Not':'MOVE_MODE','doing':'LINE_TRACING'})
+            smach.StateMachine.add('Stand_By_Mode',Stand_by_mode(), transitions={'done':'Stand_By_Finish' , 'doing':'Stand_By_Mode'})
+            smach.StateMachine.add('Stand_By_Finish',Stand_by_finish(), transitions={'select_push_1':'1' , 'select_push_2':'2'})
+        smach.StateMachine.add('STAND_BY_MODE',init_sub, transitions={'1':'MOVE_MODE','2':'MANUAL_CONTROL_MODE'})
 
-        move_sub = smach.StateMachine(outcomes = ['done'])
-        with move_sub:
-            smach.StateMachine.add('Stop!',Stop(),transitions={'doing':'Stop!','move_forward':'Move_Forward','step_back':'Step_Back','turn_left':'Turn_Left','turn_right':'Turn_Right','move_to_the_right':'Move_To_The_Right','move_to_the_left':'Move_To_The_Left','done':'done'})
-            smach.StateMachine.add('Move_Forward',Move_forward(),transitions={'stop':'Stop!'})
-            smach.StateMachine.add('Step_Back',Step_back(),transitions={'stop':'Stop!'})
-            smach.StateMachine.add('Turn_Left',Turn_left(),transitions={'stop':'Stop!'})
-            smach.StateMachine.add('Turn_Right',Turn_right(),transitions={'stop':'Stop!'})
-            smach.StateMachine.add('Move_To_The_Right',Move_to_the_right(),transitions={'stop':'Stop!'})
-            smach.StateMachine.add('Move_To_The_Left',Move_to_the_left(),transitions={'stop':'Stop!'})
-        smach.StateMachine.add('MOVE_MODE',move_sub,transitions={'done':'ARM_MODE'})
+        move_mode_sub_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
+        with move_mode_sub_sub:
+            smach.StateMachine.add('Stop_Mode',Stop_mode(),transitions={'done':'mode_finish','exit':'exit','doing':'Stop_Mode','right':'Right_Move','front':'Move_Forward','behind':'BACK','left':'Left_Move'})
+            smach.StateMachine.add('Move_Forward', Move_forward(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Move_Forward'})
+            smach.StateMachine.add('Right_Move',Right_move(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Right_Move'})
+            smach.StateMachine.add('BACK', Back(),transitions={'done':'Stop_Mode','exit':'exit','doing':'BACK'})
+            smach.StateMachine.add('Left_Move', Left_move(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Left_Move'})
+        smach.StateMachine.add('MOVE_MODE',move_mode_sub_sub, transitions={'mode_finish':'ARM_MODE','exit':'STAND_BY_MODE'})
 
-        arm_sub = smach.StateMachine(outcomes = {'mode_finish'})
+        arm_sub = smach.StateMachine(outcomes=['exit'])
         with arm_sub:
-            smach.StateMachine.add('Arm_Init',Arm_init(),transitions={'done':'Arm_Open'})
-            smach.StateMachine.add('Arm_Opne',Arm_open(),transitions={'done':'Arm_Close'})
-            smach.StateMachine.add('Arm_Close',Arm_close(),transitions={'done':'mode_finish'})
-        smach.StateMachine.add('ARM_MODE',arm_sub,transitions={'mode_finish':'MOVE_MODE'})
-        
+            smach.StateMachine.add('Arm_Init',Arm_init(), transitions={'arm_open':'Arm_Open','arm_close':'Arm_Close','exit':'exit','doing':'Arm_Init'})
+            smach.StateMachine.add('Arm_Open',Arm_open(), transitions={'arm_init':'Arm_Init','exit':'exit','doing':'Arm_Open','done':'Arm_Init'})
+            smach.StateMachine.add('Arm_Close',Arm_close(), transitions={'arm_init':'Arm_Init','exit':'exit','doing':'Arm_Close','done':'Arm_Init'})
+        smach.StateMachine.add('ARM_MODE',arm_sub, transitions={'exit':'STAND_BY_MODE'})
+
+        manual_move_mode_sub_sub = smach.StateMachine(outcomes=['exit'])
+        with manual_move_mode_sub_sub:
+            smach.StateMachine.add('Stop_Mode2',Manual_stop_mode(),transitions={'done':'mode_finish','exit':'exit','doing':'Stop_Mode2','right':'Right_Move2','front':'Move_Forward2','behind':'BACK2','left':'Left_Move2'})
+            smach.StateMachine.add('Move_Forward2', Manual_move_forward(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Move_Forward2'})
+            smach.StateMachine.add('Right_Move2',Manual_right_move(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Right_Move2'})
+            smach.StateMachine.add('BACK2', Manual_back(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'BACK2'})
+            smach.StateMachine.add('Left_Move2', Manual_left_move(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Left_Move2'})
+        smach.StateMachine.add('MANUAL_CONTROL_MODE',manual_move_mode_sub_sub, transitions={'exit':'STAND_BY_MODE'})
+
     sis = smach_ros.IntrospectionServer('smach_server', sm, '/ROOT')
     sis.start()
     outcome = sm.execute()
