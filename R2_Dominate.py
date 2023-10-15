@@ -268,27 +268,64 @@ def main():
 
         move_mode_sub_sub = smach.StateMachine(outcomes=['mode_finish','exit'])
         with move_mode_sub_sub:
-            smach.StateMachine.add('Stop_Mode',Stop_mode(),transitions={'done':'mode_finish','exit':'exit','doing':'Stop_Mode','right':'Right_Move','front':'Move_Forward','behind':'BACK','left':'Left_Move'})
-            smach.StateMachine.add('Move_Forward', Move_forward(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Move_Forward'})
-            smach.StateMachine.add('Right_Move',Right_move(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Right_Move'})
-            smach.StateMachine.add('BACK', Back(),transitions={'done':'Stop_Mode','exit':'exit','doing':'BACK'})
-            smach.StateMachine.add('Left_Move', Left_move(),transitions={'done':'Stop_Mode','exit':'exit','doing':'Left_Move'})
-        smach.StateMachine.add('MOVE_MODE',move_mode_sub_sub, transitions={'mode_finish':'ARM_MODE','exit':'STAND_BY_MODE'})
+            smach.StateMachine.add('Stop_Mode',Stop_mode(),transitions={'done':'mode_finish',
+									'exit':'exit',
+									'doing':'Stop_Mode',
+									'right':'Right_Move',
+									'front':'Move_Forward',
+									'behind':'BACK',
+									'left':'Left_Move'})
+            smach.StateMachine.add('Move_Forward', Move_forward(),transitions={'done':'Stop_Mode',
+									       'exit':'exit',
+									       'doing':'Move_Forward'})
+            smach.StateMachine.add('Right_Move',Right_move(),transitions={'done':'Stop_Mode',
+									  'exit':'exit',
+									  'doing':'Right_Move'})
+            smach.StateMachine.add('BACK', Back(),transitions={'done':'Stop_Mode',
+							       'exit':'exit',
+							       'doing':'BACK'})
+            smach.StateMachine.add('Left_Move', Left_move(),transitions={'done':'Stop_Mode',
+									 'exit':'exit',
+									 'doing':'Left_Move'})
+        smach.StateMachine.add('MOVE_MODE',move_mode_sub_sub, transitions={'mode_finish':'ARM_MODE',
+									   'exit':'STAND_BY_MODE'})
 
         arm_sub = smach.StateMachine(outcomes=['exit'])
         with arm_sub:
-            smach.StateMachine.add('Arm_Init',Arm_init(), transitions={'arm_open':'Arm_Open','arm_close':'Arm_Close','exit':'exit','doing':'Arm_Init'})
-            smach.StateMachine.add('Arm_Open',Arm_open(), transitions={'arm_init':'Arm_Init','exit':'exit','doing':'Arm_Open','done':'Arm_Init'})
-            smach.StateMachine.add('Arm_Close',Arm_close(), transitions={'arm_init':'Arm_Init','exit':'exit','doing':'Arm_Close','done':'Arm_Init'})
+            smach.StateMachine.add('Arm_Init',Arm_init(), transitions={'arm_open':'Arm_Open',
+								       'arm_close':'Arm_Close',
+								       'exit':'exit',
+								       'doing':'Arm_Init'})
+            smach.StateMachine.add('Arm_Open',Arm_open(), transitions={'arm_init':'Arm_Init',
+								       'exit':'exit',
+								       'doing':'Arm_Open',
+								       'done':'Arm_Init'})
+            smach.StateMachine.add('Arm_Close',Arm_close(), transitions={'arm_init':'Arm_Init',
+									 'exit':'exit',
+									 'doing':'Arm_Close',
+									 'done':'Arm_Init'})
         smach.StateMachine.add('ARM_MODE',arm_sub, transitions={'exit':'STAND_BY_MODE'})
 
         manual_move_mode_sub_sub = smach.StateMachine(outcomes=['exit'])
         with manual_move_mode_sub_sub:
-            smach.StateMachine.add('Stop_Mode2',Manual_stop_mode(),transitions={'done':'mode_finish','exit':'exit','doing':'Stop_Mode2','right':'Right_Move2','front':'Move_Forward2','behind':'BACK2','left':'Left_Move2'})
-            smach.StateMachine.add('Move_Forward2', Manual_move_forward(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Move_Forward2'})
-            smach.StateMachine.add('Right_Move2',Manual_right_move(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Right_Move2'})
-            smach.StateMachine.add('BACK2', Manual_back(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'BACK2'})
-            smach.StateMachine.add('Left_Move2', Manual_left_move(),transitions={'done':'Stop_Mode2','exit':'exit','doing':'Left_Move2'})
+            smach.StateMachine.add('Stop_Mode2',Manual_stop_mode(),transitions={'exit':'exit',
+										'doing':'Stop_Mode2',
+										'right':'Right_Move2',
+										'front':'Move_Forward2',
+										'behind':'BACK2',
+										'left':'Left_Move2'})
+            smach.StateMachine.add('Move_Forward2', Manual_move_forward(),transitions={'done':'Stop_Mode2',
+										       'exit':'exit',
+										       'doing':'Move_Forward2'})
+            smach.StateMachine.add('Right_Move2',Manual_right_move(),transitions={'done':'Stop_Mode2',
+										  'exit':'exit',
+										  'doing':'Right_Move2'})
+            smach.StateMachine.add('BACK2', Manual_back(),transitions={'done':'Stop_Mode2',
+								       'exit':'exit',
+								       'doing':'BACK2'})
+            smach.StateMachine.add('Left_Move2', Manual_left_move(),transitions={'done':'Stop_Mode2',
+										 'exit':'exit',
+										 'doing':'Left_Move2'})
         smach.StateMachine.add('MANUAL_CONTROL_MODE',manual_move_mode_sub_sub, transitions={'exit':'STAND_BY_MODE'})
 
     sis = smach_ros.IntrospectionServer('smach_server', sm, '/ROOT')
