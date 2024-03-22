@@ -1,0 +1,47 @@
+import launch
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        
+        launch.actions.LogInfo(
+            msg="Launch turtlesim node and turtle_teleop_key node."
+        ),
+        
+        launch.actions.TimerAction(period=3.0, actions=[
+            launch.actions.LogInfo(
+                msg="It's been three minutes since the launch"
+            )
+        ]),
+
+        # Node for turtlesim
+        Node(
+            package         = 'turtlesim',         # package name
+            namespace       = 'turtlesim',         # namespace for launching node
+            executable      = 'turtlesim_node',    # file name to run
+            name            = 'turtlesim_node',         # node name
+            output          = 'screen',            # option to display standard output on console
+            parameters      = [ {'background_r': 255},
+                                {'background_g': 255},
+                                {'background_b': 0}
+                                ]),
+        
+        Node(
+            package         = 'joy',         # package name
+            namespace       = 'joy',         # namespace for launching node
+            executable      = 'joy_node', # file name to run
+            name            = 'joy_node',     # node name
+            output          = 'screen',
+                                ),
+
+        Node(
+            package         = 'joy_translate',
+            namespace       = 'joy_translate',
+            executable      = 'joy_translate_node',
+            name            = 'joy_translate_node',
+            remappings      = [('/joy_translate/cmd_vel', '/turtlesim/turtle1/cmd_vel')],
+            output          = 'screen',
+                                ),
+        
+    ])
